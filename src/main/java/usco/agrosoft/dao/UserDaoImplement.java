@@ -41,13 +41,17 @@ public class UserDaoImplement implements UserDao {
     @Override
     @Transactional
     public User getUser(String idUser) {
-        String query = "FROM User WHERE id_user = :idUser";
+        String query = "FROM User WHERE id_user = :idUser AND is_active_user = :isActiveUser";
 
-        User user = (User) entityManager.createQuery(query)
-                .setParameter("idUser", idUser)
-                .getSingleResult();
-        System.out.println(user);
-        return user;
+        try {
+            User result = (User) entityManager.createQuery(query)
+                    .setParameter("idUser", idUser)
+                    .setParameter("isActiveUser", true)
+                    .getSingleResult();
+            return result;
+        } catch (NoResultException e) {
+            return null;
+        }
     }
 
     @Override
@@ -246,6 +250,12 @@ public class UserDaoImplement implements UserDao {
             String passwordHashed = userFound.getPassword();
             Argon2 argon2 = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2id);
             if (argon2.verify(passwordHashed, data.get("oldPassword").toString())) {
+                if(!userFound.isActiveUser()){
+                    return "3";
+                }
+                if(!userFound.isVerficate()){
+                    return "4";
+                }
                 String hash = (String) data.get("hash");
                 userFound.setPassword(hash);
                 entityManager.merge(userFound);

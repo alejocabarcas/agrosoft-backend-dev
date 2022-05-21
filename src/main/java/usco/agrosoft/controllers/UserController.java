@@ -58,33 +58,19 @@ public class UserController {
             return objN;
         }
 
-        if (userDao.getUser(idUser) == null) {
+        User user = userDao.getUser(idUser);
+        if (user == null) {
             JSONObject objN = new JSONObject();
             objN.put("error", true);
             objN.put("response", "El usuario no existe");
             return objN;
-        } else {
-
-            User user = userDao.getUser(idUser);
-            // convert user to json
-            ObjectMapper mapper = new ObjectMapper();
-            // change user date format to mapper
-            // mapper.setDateFormat(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
-            String jsonInString = mapper.writeValueAsString(user);
-            JSONObject obj = new JSONObject();
-            obj.put("error", false);
-            obj.put("response", jsonInString);
-            return obj;
-
-            /*
-             * JSONParser parser = new JSONParser();
-             * 
-             * 
-             * String jsonInString = new Gson().toJson(user);
-             * console.log
-             * return (JSONObject) parser.parse(jsonInString);
-             */
         }
+        user.setPassword(null);
+
+        JSONObject obj = new JSONObject();
+        obj.put("error", false);
+        obj.put("response", user);
+        return obj;
 
     }
 
@@ -387,11 +373,21 @@ public class UserController {
                     objResponse8.put("error", true);
                     objResponse8.put("response", "Error, la contraseña antigua no coincide");
                     return objResponse8;
-                } else {
+                } else if (result.equals("2")) {
                     JSONObject objResponse6 = new JSONObject();
                     objResponse6.put("error", true);
                     objResponse6.put("response", "Id de usuario invalido o no existe, por favor digitelo nuevamente");
                     return objResponse6;
+                } else if (result.equals("3")) {
+                    JSONObject objResponse7 = new JSONObject();
+                    objResponse7.put("error", true);
+                    objResponse7.put("response", "Error, el usuario no se encuentra activo");
+                    return objResponse7;
+                } else {
+                    JSONObject objResponse9 = new JSONObject();
+                    objResponse9.put("error", true);
+                    objResponse9.put("response", "Error, el usuario no está verificado");
+                    return objResponse9;
                 }
             }
         } else {
