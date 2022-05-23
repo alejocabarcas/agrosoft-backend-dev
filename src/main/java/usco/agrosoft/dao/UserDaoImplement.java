@@ -7,7 +7,6 @@ import net.minidev.json.JSONObject;
 
 import org.springframework.beans.factory.annotation.Autowired;
 
-import usco.agrosoft.models.Identifier;
 import usco.agrosoft.models.User;
 import org.springframework.stereotype.Repository;
 import usco.agrosoft.utils.TestService;
@@ -107,9 +106,10 @@ public class UserDaoImplement implements UserDao {
 
     @Override
     public User login(User user) throws UnsupportedEncodingException {
-        String query = "FROM User WHERE email = :email";
+        String query = "FROM User WHERE email = :email AND is_active_user = :isActiveUser";
         List<User> list = entityManager.createQuery(query)
                 .setParameter("email", user.getEmail())
+                .setParameter("isActiveUser", true)
                 .getResultList();
         if (list.isEmpty()) {
             return null;
@@ -278,7 +278,7 @@ public class UserDaoImplement implements UserDao {
             User userFound = listUsers.get(0);
             if (userFound.isActiveUser()) {
                 userFound.setActiveUser(false);
-                String email = '$' + user.getEmail();
+                String email = '$' + userFound.getEmail();
                 userFound.setEmail(email);
                 entityManager.merge(userFound);
                 return "0";
@@ -289,4 +289,73 @@ public class UserDaoImplement implements UserDao {
             return "1";
         }
     }
+
+    @Override
+    public JSONObject comparePassword(String idUser, String password) {
+        JSONObject response = new JSONObject();
+        response.put("error", true);
+        String query = "FROM User WHERE id_user = :idUser AND is_active_user = :isActiveUser";
+        List<User> listUsers = entityManager.createQuery(query)
+                .setParameter("idUser", idUser)
+                .setParameter("isActiveUser", true)
+                .getResultList();
+        if (listUsers.isEmpty()) {
+            response.put("response", "Usuario no encontrado");
+            return response;
+        }
+        User userFound = listUsers.get(0);
+        Argon2 argon2 = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2id);
+        if (argon2.verify(userFound.getPassword(), password)) {
+            //generate a uuid
+            String token = UUID.randomUUID().toString();
+            userFound.setTokenUser(token);
+            entityManager.merge(userFound);
+            response.put("error", false);
+            response.put("response", token);
+            return response;
+        } else {
+            response.put("response", "Contraseña incorrecta");
+            return response;
+        }
+    }
+
+    @Override
+    public JSONObject changeEmail(String token, String email) throws UnsupportedEncodingException {
+        JSONObject response = new JSONObject();
+        response.put("error", true);
+
+        String query = "FROM User WHERE token_user = :tokenUser AND is_active_user = :isActiveUser";
+        List<User> listUsers = entityManager.createQuery(query)
+                .setParameter("tokenUser", token)
+                .setParameter("isActiveUser", true)
+                .getResultList();
+        if (listUsers.isEmpty()) {
+            response.put("response", "Token invalido o usuario no encontrado, por favor vuelve a intentarlo");
+            return response;
+        }
+        User userFound = listUsers.get(0);
+
+        if (userFound.getEmail().equals(email)) {
+            response.put("response", "El email ingresado es el mismo que el actual");
+            return response;
+        }
+
+        userFound.setEmail(email);
+        userFound.setTokenUser("");
+        userFound.setVerficate(false);
+        entityManager.merge(userFound);
+        response.put("error", false);
+        response.put("response", "El email se ha cambiado correctamente. Por favor vuelva a activar su cuenta, revise su email");
+
+        //generate an uui and send email
+        String tokenNew = UUID.randomUUID().toString();
+        userFound.setTokenUser(tokenNew);
+        entityManager.merge(userFound);
+        String body = "Activa tu cuenta dando click aqui: " + activeLink + tokenNew;
+        testService.sendEmail(userFound.getEmail(), userFound.getName() + userFound.getLastName(),
+                "Activa tu cuenta Agrosoft", body);
+        
+        return response;
+    }
+
 }

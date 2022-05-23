@@ -25,7 +25,7 @@ public class IdentifierDaoImplement implements IdentifierDao {
 
     @Override
     @Transactional
-    public Identifier getIdentifier(int idIdentifier) {
+    public Identifier getIdentifier(String idIdentifier) {
         String query = "FROM Identifier WHERE id_identifier = :idIdentifier";
 
         try {
@@ -33,10 +33,8 @@ public class IdentifierDaoImplement implements IdentifierDao {
                     .setParameter("idIdentifier", idIdentifier)
                     .getSingleResult();
             return identifier;
-
         } catch (Exception e) {
             return null;
         }
-
     }
 }

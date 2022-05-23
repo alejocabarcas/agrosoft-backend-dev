@@ -6,8 +6,6 @@ import it.ozimov.springboot.mail.configuration.EnableEmailTools;
 import net.minidev.json.JSONObject;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
 import org.json.simple.parser.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +27,6 @@ import java.util.UUID;
 import java.util.regex.*;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
 
 @EnableEmailTools
 @RestController
@@ -39,6 +36,8 @@ public class UserController {
     private UserDao userDao;
     @Autowired
     private IdentifierDao identifierDao;
+
+    String passwordError = "La contraseña debe tener 8 caracteres, minimo un numero, una mayuscula, una minuscula y un simbolo";
 
     @RequestMapping(value = "api/users", method = RequestMethod.GET)
     public List<User> getUsers() {
@@ -51,117 +50,93 @@ public class UserController {
     @CrossOrigin
     @RequestMapping(value = "api/user/{idUser}", method = RequestMethod.GET)
     public JSONObject getUser(@PathVariable String idUser) throws ParseException, JsonProcessingException {
+        JSONObject response = new JSONObject();
+        response.put("error", true);
         if (idUser == null || idUser.equals("")) {
-            JSONObject objN = new JSONObject();
-            objN.put("error", true);
-            objN.put("response", "Debe enviar un ID");
-            return objN;
+            response.put("response", "Debe enviar un ID");
+            return response;
         }
 
         User user = userDao.getUser(idUser);
+
         if (user == null) {
-            JSONObject objN = new JSONObject();
-            objN.put("error", true);
-            objN.put("response", "El usuario no existe");
-            return objN;
+            response.put("response", "El usuario no existe");
+            return response;
         }
         user.setPassword(null);
 
-        JSONObject obj = new JSONObject();
-        obj.put("error", false);
-        obj.put("response", user);
-        return obj;
+        response.put("error", false);
+        response.put("response", user);
+        return response;
 
     }
 
     @CrossOrigin
     @RequestMapping(value = "api/register", method = RequestMethod.POST)
     public JSONObject registerUser(@RequestBody User user) throws UnsupportedEncodingException {
+        JSONObject response = new JSONObject();
+        response.put("error", true);
         // fields validated succesfully
         if (user.getName() == null || user.getName().equals("")) {
-            JSONObject objN = new JSONObject();
-            objN.put("error", true);
-            objN.put("response", "No se ha podido registrar, el nombre es requerido");
-            return objN;
+            response.put("response", "No se ha podido registrar, el nombre es requerido");
+            return response;
         }
         String nameRegex = "^[a-zA-Z ]+$";
         Pattern patternName = Pattern.compile(nameRegex);
         Matcher matcherName = patternName.matcher(user.getName());
         if (matcherName.find() != true) {
-            JSONObject objEm = new JSONObject();
-            objEm.put("error", true);
-            objEm.put("response", "No se ha podido registrar, Ingrese un nombre valido");
-            return objEm;
+            response.put("response", "No se ha podido registrar, Ingrese un nombre valido");
+            return response;
         }
 
         if (user.getLastName() == null || user.getLastName().equals("")) {
-            JSONObject objL = new JSONObject();
-            objL.put("error", true);
-            objL.put("response", "No se ha podido registrar, el apellido es requerido");
-            return objL;
+            response.put("response", "No se ha podido registrar, el apellido es requerido");
+            return response;
         }
 
         Matcher matcherLastName = patternName.matcher(user.getLastName());
         if (matcherLastName.find() != true) {
-            JSONObject objEm = new JSONObject();
-            objEm.put("error", true);
-            objEm.put("response", "No se ha podido registrar, Ingrese un apellido valido");
-            return objEm;
+            response.put("response", "No se ha podido registrar, Ingrese un apellido valido");
+            return response;
         }
 
-        if (user.getPhoneNumber() == null || user.getPhoneNumber().equals("") || user.getPhoneNumber().length() != 10) {
-            JSONObject objP = new JSONObject();
-            objP.put("error", true);
-            objP.put("response", "No se ha podido registrar, el telefono debe tener 10 caracteres y es requerido");
-            return objP;
+        if (user.getPhoneNumber() == null || user.getPhoneNumber().equals("") || user.getPhoneNumber().length() < 9 || user.getPhoneNumber().length() > 15) {
+            response.put("response", "No se ha podido registrar, el numero de telefono es requerido y debe tener entre 9 y 15 digitos");
+            return response;
         }
 
         String phoneRegex = "^([0-9])*$";
         Pattern patternPhone = Pattern.compile(phoneRegex);
         Matcher matcherPhone = patternPhone.matcher(user.getPhoneNumber());
         if (matcherPhone.find() != true) {
-            JSONObject objEm = new JSONObject();
-            objEm.put("error", true);
-            objEm.put("response", "No se ha podido registrar, Ingrese un telefono valido valido");
-            return objEm;
+            response.put("response", "No se ha podido registrar, Ingrese un numero de telefono valido");
+            return response;
         }
 
         if (user.getPassword() == null || user.getPassword().equals("")) {
-            JSONObject objPa = new JSONObject();
-            objPa.put("error", true);
-            objPa.put("response", "No se ha podido registrar, la contraseña es requerida");
-            return objPa;
+            response.put("response", "No se ha podido registrar, la contraseña es requerida");
+            return response;
         }
-        // ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$
 
         String passwordRegex = "^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!.@$%^&*-]).{8,}$";
         Pattern patternPassword = Pattern.compile(passwordRegex);
         Matcher matcherPassword = patternPassword.matcher(user.getPassword());
         if (matcherPassword.find() != true) {
-            JSONObject objEm = new JSONObject();
-            objEm.put("error", true);
-            objEm.put("response",
-                    "La contraseña debe tener 8 caracteres, minimo un numero, una mayuscula, una minuscula y un simbolo");
-            return objEm;
+            response.put("response", passwordError);
+            return response;
         }
 
         if (user.getEmail() == null || user.getEmail().equals("")) {
-            JSONObject objE = new JSONObject();
-            objE.put("error", true);
-            objE.put("response", "No se ha podido registrar, el email es requerido");
-            return objE;
+            response.put("response", "No se ha podido registrar, el email es requerido");
+            return response;
         }
         if (user.getIdIdentifier() == 0) {
-            JSONObject objE = new JSONObject();
-            objE.put("error", true);
-            objE.put("response", "No se ha podido registrar, el identificador es requerido");
-            return objE;
+            response.put("response", "No se ha podido registrar, el identificador es requerido");
+            return response;
         }
         if (user.getIdIdentifier() < 2 || user.getIdIdentifier() > 247) {
-            JSONObject objE = new JSONObject();
-            objE.put("error", true);
-            objE.put("response", "No se ha podido registrar, digite un identificador valido");
-            return objE;
+            response.put("response", "No se ha podido registrar, el identificador es invalido");
+            return response;
         }
 
         String emailRegex = "^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$";
@@ -169,10 +144,8 @@ public class UserController {
         Pattern pattern = Pattern.compile(emailRegex);
         Matcher matcher = pattern.matcher(user.getEmail());
         if (matcher.find() != true) {
-            JSONObject objEm = new JSONObject();
-            objEm.put("error", true);
-            objEm.put("response", "No se ha podido registrar, email no valido");
-            return objEm;
+            response.put("response", "No se ha podido registrar, Ingrese un email valido");
+            return response;
         }
 
         Argon2 argon2 = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2id);
@@ -184,15 +157,12 @@ public class UserController {
         user.setActiveUser(true);
         String saved = userDao.register(user);
         if (saved.equals("0")) {
-            JSONObject objRe = new JSONObject();
-            objRe.put("error", true);
-            objRe.put("response", "No se ha podido registrar, el usuario ya existe");
-            return objRe;
+            response.put("response", "No se ha podido registrar, el usuario ya existe");
+            return response;
         } else {
-            JSONObject objRe = new JSONObject();
-            objRe.put("error", false);
-            objRe.put("response", "Se ha registrado correctamente");
-            return objRe;
+            response.put("error", false);
+            response.put("response", "Usuario registrado con exito");
+            return response;
         }
     }
 
@@ -213,101 +183,87 @@ public class UserController {
     @CrossOrigin
     @RequestMapping(value = "api/changepassword", method = RequestMethod.POST)
     public JSONObject changePassword(@RequestBody JSONObject data) {
+        JSONObject response = new JSONObject();
+        response.put("error", true);
+
         Argon2 argon2 = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2id);
+        
+        if (data.get("password1") == null || data.get("password1").equals("")) {
+            response.put("response", "No se ha podido cambiar la contraseña, falta el campo password1");
+            return response;
+        }
+        if (data.get("password2") == null || data.get("password2").equals("")) {
+            response.put("response", "No se ha podido cambiar la contraseña, falta el campo password2");
+            return response;
+        }
+        if (data.get("tokenUser") == null || data.get("tokenUser").equals("")) {
+            response.put("response", "No se ha podido cambiar la contraseña, falta el campo tokenUser");
+            return response;
+        }
+
         String password = (String) data.get("password1");
         String password2 = (String) data.get("password2");
         String token = (String) data.get("tokenUser");
-        if (password == null || password.equals("")) {
-            JSONObject objEm = new JSONObject();
-            objEm.put("error", true);
-            objEm.put("response", "Falta el campo password1");
-            return objEm;
-        }
-        if (password2 == null || password2.equals("")) {
-            JSONObject objEm = new JSONObject();
-            objEm.put("error", true);
-            objEm.put("response", "Falta el campo password2");
-            return objEm;
-        }
-        if (token == null || token.equals("")) {
-            JSONObject objEm = new JSONObject();
-            objEm.put("error", true);
-            objEm.put("response", "Error, envie un token valido");
-            return objEm;
-        }
+
         if (password.equals(password2)) {
             String passwordRegex = "^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!.@$%^&*-]).{8,}$";
             Pattern patternPassword = Pattern.compile(passwordRegex);
             Matcher matcherPassword = patternPassword.matcher(password);
             if (matcherPassword.find() != true) {
-                JSONObject objEm = new JSONObject();
-                objEm.put("error", true);
-                objEm.put("response",
-                        "La contraseña debe tener 8 caracteres, minimo un numero, una mayuscula, una minuscula y un simbolo");
-                return objEm;
+                response.put("response", passwordError);
+                return response;
             } else {
-                // data.get("tokenUser")
-                if (data.get("tokenUser") == null || data.get("tokenUser").equals("")) {
-                    JSONObject objEm = new JSONObject();
-                    objEm.put("error", true);
-                    objEm.put("response", "Debe enviar un token valido");
-                    return objEm;
+                String hash = argon2.hash(1, 1024, 1, password);
+                data.put("hash", hash);
+                String result = userDao.changePassword(data);
+                if (result.equals("0")) {
+                    response.put("error", false);
+                    response.put("response", "Contraseña cambiada con exito, redireccionando...");
+                    return response;
                 } else {
-                    String hash = argon2.hash(1, 1024, 1, password);
-                    data.put("hash", hash);
-                    String result = userDao.changePassword(data);
-                    if (result.equals("0")) {
-                        JSONObject obj0 = new JSONObject();
-                        obj0.put("error", false);
-                        obj0.put("response", "Su contraseña se ha restaurado con exito, Redireccionando...");
-                        return obj0;
-                    } else {
-                        JSONObject obj1 = new JSONObject();
-                        obj1.put("error", true);
-                        obj1.put("response", "Token invalido o ha caducado, por favor solicitelo nuevamente");
-                        return obj1;
-                    }
+                    response.put("response", "Token invalido o ha caducado, por favor solicitelo nuevamente");
+                    return response;
                 }
             }
         } else {
-            JSONObject obj1 = new JSONObject();
-            obj1.put("error", true);
-            obj1.put("response", "Las contraseñas deben coincidir");
-            return obj1;
+            response.put("response", "Las contraseñas no coinciden");
+            return response;
         }
     }
 
     @CrossOrigin
     @RequestMapping(value = "api/generate", method = RequestMethod.POST)
     public JSONObject generate(@RequestBody JSONObject data) throws UnsupportedEncodingException {
-        // validamos si el email es correcto
+        JSONObject response = new JSONObject();
+        response.put("error", true);
+
+        //validate if email is null
+        if (data.get("email") == null || data.get("email").equals("")) {
+            response.put("response", "Falta el campo email");
+            return response;
+        }
+
+        // validate if email is valid
         String emailRegex = "^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$";
 
         Pattern pattern = Pattern.compile(emailRegex);
         Matcher matcher = pattern.matcher((CharSequence) data.get("email"));
         if (matcher.find() != true) {
-            JSONObject objEm = new JSONObject();
-            objEm.put("error", true);
-            objEm.put("response", "El email no es valido");
-            return objEm;
+            response.put("response", "Ingrese un email valido");
+            return response;
         } else {
             String result = userDao.generateToken(data);
             if (result.equals("0")) {
-                JSONObject obj0 = new JSONObject();
-                obj0.put("error", true);
-                obj0.put("response", "El email no se encuentra registrado");
-                return obj0;
+                response.put("response", "El email no se encuentra registrado");
+                return response;
             } else if (result.equals("1")) {
-                JSONObject obj1 = new JSONObject();
-                obj1.put("error", true);
-                obj1.put("response", "La cuenta no se encuentra activa, por favor revise su email y activela");
-                return obj1;
+                response.put("response", "La cuenta no se encuentra activa, por favor revise su email y activela");
+                return response;
             } else {
-                JSONObject obj2 = new JSONObject();
-                obj2.put("error", false);
-                obj2.put("response", "Revise su email para cambiar la contraseña");
-                obj2.put("userToken", result);
-                return obj2;
+                response.put("error", false);
+                response.put("response", "Revise su email para cambiar la contraseña");
+                response.put("userToken", result);
+                return response;
             }
         }
     }
@@ -315,48 +271,39 @@ public class UserController {
     @CrossOrigin
     @RequestMapping(value = "api/newpassword", method = RequestMethod.PUT)
     public JSONObject newPassword(@RequestBody JSONObject data) {
+        JSONObject response = new JSONObject();
+        response.put("error", true);
+
         Argon2 argon2 = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2id);
-        String oldPassword = (String) data.get("oldPassword");
+
+        if (data.get("oldPassword") == null || data.get("oldPassword").equals("")) {
+            response.put("response", "Falta el campo oldPassword");
+            return response;
+        }
+
+        if (data.get("password1") == null || data.get("password1").equals("")) {
+            response.put("response", "Falta el campo password1");
+            return response;
+        }
+        if (data.get("password2") == null || data.get("password2").equals("")) {
+            response.put("response", "Falta el campo password2");
+            return response;
+        }
+        if (data.get("idUser") == null || data.get("idUser").equals("")) {
+            response.put("response", "Falta el campo idUser");
+            return response;
+        }
+
         String password1 = (String) data.get("password1");
         String password2 = (String) data.get("password2");
-        String idUser = (String) data.get("idUser");
-
-        if (oldPassword == null || oldPassword.equals("")) {
-            JSONObject objEm = new JSONObject();
-            objEm.put("error", true);
-            objEm.put("response", "Falta el campo oldPassword");
-            return objEm;
-        }
-
-        if (password1 == null || password1.equals("")) {
-            JSONObject objResponse1 = new JSONObject();
-            objResponse1.put("error", true);
-            objResponse1.put("response", "Falta el campo password1");
-            return objResponse1;
-        }
-        if (password2 == null || password2.equals("")) {
-            JSONObject objResponse2 = new JSONObject();
-            objResponse2.put("error", true);
-            objResponse2.put("response", "Falta el campo password2");
-            return objResponse2;
-        }
-        if (idUser == null || idUser.equals("")) {
-            JSONObject objResponse3 = new JSONObject();
-            objResponse3.put("error", true);
-            objResponse3.put("response", "Error, envie un id de usuario valido");
-            return objResponse3;
-        }
 
         if (password1.equals(password2)) {
             String passwordRegex = "^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!.@$%^&*-]).{8,}$";
             Pattern patternPassword = Pattern.compile(passwordRegex);
             Matcher matcherPassword1 = patternPassword.matcher(password1);
             if (matcherPassword1.find() != true) {
-                JSONObject objResponse4 = new JSONObject();
-                objResponse4.put("error", true);
-                objResponse4.put("response",
-                        "La contraseña debe tener 8 caracteres, minimo un numero, una mayuscula, una minuscula y un simbolo");
-                return objResponse4;
+                response.put("response", passwordError);
+                return response;
             } else {
                 String hash = argon2.hash(1, 1024, 1, password1);
                 data.put("hash", hash);
@@ -364,74 +311,57 @@ public class UserController {
                 String result = userDao.newPassword(data);
 
                 if (result.equals("0")) {
-                    JSONObject objResponse5 = new JSONObject();
-                    objResponse5.put("error", false);
-                    objResponse5.put("response", "Su contraseña se ha restaurado con exito");
-                    return objResponse5;
+                    response.put("error", false);
+                    response.put("response", "Contraseña restaurada con exito");
+                    return response;
                 } else if (result.equals("1")) {
-                    JSONObject objResponse8 = new JSONObject();
-                    objResponse8.put("error", true);
-                    objResponse8.put("response", "Error, la contraseña antigua no coincide");
-                    return objResponse8;
+                    response.put("response", "La contraseña anterior no coincide");
+                    return response;
                 } else if (result.equals("2")) {
-                    JSONObject objResponse6 = new JSONObject();
-                    objResponse6.put("error", true);
-                    objResponse6.put("response", "Id de usuario invalido o no existe, por favor digitelo nuevamente");
-                    return objResponse6;
+                    response.put("response", "Id de usuario invalido o no existe, por favor intentelo nuevamente");
+                    return response;
                 } else if (result.equals("3")) {
-                    JSONObject objResponse7 = new JSONObject();
-                    objResponse7.put("error", true);
-                    objResponse7.put("response", "Error, el usuario no se encuentra activo");
-                    return objResponse7;
+                    response.put("response", "Error, el usuario no se encuentra activo");
+                    return response;
                 } else {
-                    JSONObject objResponse9 = new JSONObject();
-                    objResponse9.put("error", true);
-                    objResponse9.put("response", "Error, el usuario no está verificado");
-                    return objResponse9;
+                    response.put("response", "Error, el usuario no está verificado");
+                    return response;
                 }
             }
         } else {
-            JSONObject objResponse7 = new JSONObject();
-            objResponse7.put("error", true);
-            objResponse7.put("response", "Las contraseñas deben coincidir");
-            return objResponse7;
+            response.put("response", "Las contraseñas no coinciden");
+            return response;
         }
-
     }
 
     @CrossOrigin
     @RequestMapping(value = "api/changestate", method = RequestMethod.PUT)
     public JSONObject changeState(@RequestBody User user) {
+        JSONObject response = new JSONObject();
+        response.put("error", true);
 
         String id_user = user.getIdUser();
 
         if (id_user == null || id_user.equals("")) {
-            JSONObject objResponse = new JSONObject();
-            objResponse.put("error", true);
-            objResponse.put("response", "El id de usuario no puede estar vacio");
-            return objResponse;
-        } else {
-            String saved = userDao.changeState(user);
-            if (saved.equals("1")) {
-                JSONObject objRe = new JSONObject();
-                objRe.put("error", true);
-                objRe.put("response", "No se ha encontrado el usuario");
-                return objRe;
-            } else if (saved.equals("2")) {
-                JSONObject objResponse = new JSONObject();
-                objResponse.put("error", true);
-                objResponse.put("response", "Su usuario ya se encuentra inactivo");
-                return objResponse;
-            } else {
-                JSONObject objRe = new JSONObject();
-                objRe.put("error", false);
-                objRe.put("response", " Su usuario se ha eliminado correctamente");
-                return objRe;
-            }
+            response.put("response", "Falta el campo idUser");
+            return response;
         }
+        String saved = userDao.changeState(user);
+        if (saved.equals("1")) {
+            response.put("response", "No se ha encontrado el usuario");
+            return response;
+        } else if (saved.equals("2")) {
+            response.put("response", "El usuario ya se encuentra inactivo");
+            return response;
+        } else {
+            response.put("error", false);
+            response.put("response", "El usuario se ha eliminado con exito");
+            return response;
+        } 
     }
 
-    @RequestMapping(value = "/api/modifyuser", method = RequestMethod.PUT)
+    @CrossOrigin
+    @RequestMapping(value = "api/modifyuser", method = RequestMethod.PUT)
     public JSONObject modifyuser(@RequestBody User user) {
 
         String idUser = user.getIdUser();
@@ -475,7 +405,9 @@ public class UserController {
             return objRe;
         }
 
-        Identifier identifier = identifierDao.getIdentifier(idIdentifier);
+        String idIdentifierString = String.valueOf(idIdentifier);
+
+        Identifier identifier = identifierDao.getIdentifier(idIdentifierString);
 
         if (identifier == null) {
             objRe.put("response", "el identificador del pais es incorrecto");
@@ -487,4 +419,57 @@ public class UserController {
         return objRe;
     }
 
+    @CrossOrigin
+    @RequestMapping(value = "api/comparepassword", method = RequestMethod.POST)
+    public JSONObject comparePassword(@RequestBody User user) {
+
+        String idUser = user.getIdUser();
+        String password = user.getPassword();
+
+        JSONObject objRe = new JSONObject();
+        objRe.put("error", true);
+
+        if (idUser == null || idUser == "") {
+            objRe.put("response", "hace falta el id de usuario");
+            return objRe;
+        }
+        if (password == null || password == "") {
+            objRe.put("response", "hace falta la contraseña");
+            return objRe;
+        }
+
+        JSONObject userDaoRespone = userDao.comparePassword(idUser, password);
+
+        return userDaoRespone;
+    }
+
+    @CrossOrigin
+    @RequestMapping(value = "api/changeemail", method = RequestMethod.POST)
+    public JSONObject changeEmail(@RequestBody User user) throws UnsupportedEncodingException {
+
+        String token = user.getTokenUser();
+        String email = user.getEmail();
+        String emailRegex = "^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$";
+
+        JSONObject response = new JSONObject();
+        response.put("error", true);
+
+        if (token == null || token.equals("")) {
+            response.put("response", "hace falta el token");
+            return response;
+        }
+        if (token == null || token.equals("")) {
+            response.put("response", "hace falta el email");
+            return response;
+        }
+
+        if (!email.matches(emailRegex) || email.length() > 60) {
+            response.put("response", "el email no es valido");
+            return response;
+        }   
+
+        JSONObject userDaoRespone = userDao.changeEmail(token, email);
+
+        return userDaoRespone;
+    }
 }

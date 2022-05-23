@@ -28,4 +28,8 @@ public interface UserDao {
     String changeState(User user);
 
     JSONObject changePhoneNumber(String idUser, int idIdentifier, String phoneNumber);
+
+    JSONObject comparePassword(String idUser, String password);
+
+    JSONObject changeEmail(String token, String email) throws UnsupportedEncodingException;
 }

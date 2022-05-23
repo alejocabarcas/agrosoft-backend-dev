@@ -10,6 +10,5 @@ import java.util.Properties;
 @Configuration
 public class myConfig {
     // Here SMTP config
-    
-
+    //X_X
 }
