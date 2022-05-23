@@ -5,6 +5,7 @@ target/
 !**/src/test/**/target/
 /src/main/resources/application.properties
 /src/main/java/usco/agrosoft/myConfig.java
+jsjjss.l
 
 ### STS ###
 .apt_generated
